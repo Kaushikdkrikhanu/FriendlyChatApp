@@ -15,14 +15,21 @@
  */
 package com.google.firebase.codelab.friendlychat
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.firebase.ui.database.FirebaseRecyclerOptions
 import com.firebase.ui.database.paging.FirebaseDataSource
@@ -33,12 +40,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.codelab.friendlychat.databinding.ActivityMainBinding
 import com.google.firebase.codelab.friendlychat.model.FriendlyMessage
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
+import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
+import com.google.firebase.database.ChildEventListener as ChildEventListener
 
 class MainActivity : AppCompatActivity() {
     private lateinit var signInClient: GoogleSignInClient
@@ -47,11 +55,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
     private lateinit var db:FirebaseDatabase
     private lateinit var adapter: FriendlyMessageAdapter
+    val CHANNEL_ID = 1
+    val NOTIFICATION_ID = 11
 
     // TODO: implement Firebase instance variables
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createNotificationChannel()
+        //builder
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(this,0,intent,0)
+
+
+
         // This codelab uses View Binding
         // See: https://developer.android.com/topic/libraries/view-binding
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -70,11 +89,56 @@ class MainActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         signInClient = GoogleSignIn.getClient(this, gso)
+        //Trying to add notification
+        val query = FirebaseDatabase.getInstance().getReference().child(MESSAGES_CHILD).limitToLast(1)
+        val childEventListener = object: ChildEventListener{
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                val friendlyMessage = snapshot.getValue<FriendlyMessage>()
+                Log.i("Snap Shot", friendlyMessage?.text.toString())
+                val builder = NotificationCompat.Builder(this@MainActivity,CHANNEL_ID.toString())
+                    .setSmallIcon(R.drawable.outline_notifications_black_24)
+                    .setContentTitle(friendlyMessage?.name.toString())
+                    .setContentText(friendlyMessage?.text.toString())
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                with(NotificationManagerCompat.from(this@MainActivity)){
+                    notify(NOTIFICATION_ID,builder.build())
+                }
 
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
+
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+
+            }
+
+        }
+        query.addChildEventListener(childEventListener)
         // Initialize Realtime Database and FirebaseRecyclerAdapter
         // TODO: implement
         db = Firebase.database
         val messageRef = db.reference.child(MESSAGES_CHILD)
+        messageRef.addValueEventListener(object : ValueEventListener{
+            override fun onDataChange(snapshot: DataSnapshot) {
+
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                TODO("Not yet implemented")
+            }
+        })
         val options = FirebaseRecyclerOptions.Builder<FriendlyMessage>()
             .setQuery(messageRef, FriendlyMessage::class.java)
             .build()
@@ -240,6 +304,22 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         adapter.startListening()
     }
-    
+
+    private fun createNotificationChannel(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            val name =  "Message"
+            val descriptionText = "Description Text"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(CHANNEL_ID.toString(),name,importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+
+        }
+    }
+
+
 
 }
