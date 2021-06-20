@@ -27,6 +27,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -36,6 +37,7 @@ import com.firebase.ui.database.paging.FirebaseDataSource
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.codelab.friendlychat.databinding.ActivityMainBinding
@@ -44,6 +46,8 @@ import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.database.ChildEventListener as ChildEventListener
@@ -89,8 +93,9 @@ class MainActivity : AppCompatActivity() {
             .requestEmail()
             .build()
         signInClient = GoogleSignIn.getClient(this, gso)
-        //Trying to add notification
-        val query = FirebaseDatabase.getInstance().getReference().child(MESSAGES_CHILD).limitToLast(1)
+        obtainToken()
+        //Trying to add notification $this is unnecessary
+        /*val query = FirebaseDatabase.getInstance().getReference().child(MESSAGES_CHILD).limitToLast(1)
         val childEventListener = object: ChildEventListener{
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 val friendlyMessage = snapshot.getValue<FriendlyMessage>()
@@ -126,7 +131,9 @@ class MainActivity : AppCompatActivity() {
 
         }
         query.addChildEventListener(childEventListener)
+
         // Initialize Realtime Database and FirebaseRecyclerAdapter
+         */
         // TODO: implement
         db = Firebase.database
         val messageRef = db.reference.child(MESSAGES_CHILD)
@@ -318,6 +325,19 @@ class MainActivity : AppCompatActivity() {
             notificationManager.createNotificationChannel(channel)
 
         }
+    }
+
+    private fun obtainToken(){
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task->
+            if(!task.isSuccessful){
+                Log.w("TOKEN","Fetching FCM registration token Failed",task.exception)
+                return@OnCompleteListener
+            }
+
+            val token = task.result
+            Log.d("TOKEN", token.toString())
+            Toast.makeText(baseContext,token.toString(),Toast.LENGTH_SHORT).show()
+        })
     }
 
 

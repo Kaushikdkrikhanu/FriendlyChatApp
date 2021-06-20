@@ -60,9 +60,16 @@ dependencies {
     implementation 'com.google.firebase:firebase-database-ktx'
     implementation 'com.google.firebase:firebase-storage-ktx'
     implementation 'com.google.firebase:firebase-auth-ktx'
+    // Firebase Cloud Messaging (Java)
+    implementation 'com.google.firebase:firebase-messaging'
 
+    // Firebase Cloud Messaging (Kotlin)
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    //analytics
+    implementation 'com.google.firebase:firebase-analytics-ktx'
     // Firebase UI
     implementation 'com.firebaseui:firebase-ui-database:7.1.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
 
     // Testing dependencies
     testImplementation 'junit:junit:4.13.2'
